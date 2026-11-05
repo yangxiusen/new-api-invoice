@@ -1,0 +1,3 @@
+* text=auto eol=lf
+# Migration checksums use exact bytes; never rewrite applied SQL line endings.
+migrations/*.sql -text whitespace=cr-at-eol

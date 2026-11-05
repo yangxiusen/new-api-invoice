@@ -1,0 +1,14 @@
+.env
+.env.*
+!.env.example
+web/node_modules/
+web/dist/
+output/
+*.exe
+*.test
+
+# Machine-specific deployment and private data
+compose.local.yaml
+data/
+backups/
+*.log

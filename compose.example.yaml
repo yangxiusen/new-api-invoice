@@ -1,0 +1,24 @@
+services:
+  invoice:
+    image: invoice:v0.1-local
+    build: .
+    env_file: .env
+    ports:
+      - "127.0.0.1:3001:3001"
+    volumes:
+      - invoice_files:/data/invoices
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid,nodev
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, "http://127.0.0.1:3001/readyz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+volumes:
+  invoice_files:
