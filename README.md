@@ -63,6 +63,54 @@ Compose 只包含 invoice；原站和数据库需能从容器访问，容器名�
 
 `/healthz` 存活，`/readyz` 检查数据库、迁移 checksum、初始化标记和附件目录。认证成功后每账号每分钟 240 次；匿名失败有独立网络桶，回源最多同时 32 个，不信任任意 XFF。
 
+## New API 的 Nginx 配置与升级维护
+
+发票Web和API已打包在一个镜像中。New API与发票服务独立升级，无需合并发票代码；同源登录通过New API现有Nginx入口转发。
+
+**每次更新New API后，由部署者检查并修改New API实际使用的Nginx配置，保留或重新加入以下三段。** 将其放入提供New API访问域名的同一个 `server {}` 内，与原有 `location /` 同级，不嵌套，也不重复添加已有同名规则。原站登录与 `/api/` 请求继续进入New API。
+
+```nginx
+# 发票入口
+location = /invoice {
+    return 308 /invoice/;
+}
+
+# 发票页面
+location /invoice/ {
+    proxy_pass http://invoice-local:3001;
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+
+# 发票接口
+location /invoice-api/ {
+    client_max_body_size 11m;
+    proxy_pass http://invoice-local:3001;
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header Authorization $http_authorization;
+    proxy_read_timeout 120s;
+}
+
+```
+
+配置注意：
+
+- `invoice-local:3001` 是当前本地发票容器地址；按实际部署替换。使用本仓库 `compose.example.yaml` 的服务名时，可使用 `invoice:3001`。Nginx与发票容器必须在可互通的Docker网络中；Nginx运行在宿主机时，应改用实际已映射的宿主机地址和端口。
+- `proxy_pass` 地址末尾不要增加 `/`，保留 `/invoice/` 与 `/invoice-api/` 完整路径。
+- `PUBLIC_ORIGIN` 填浏览器访问New API的完整origin（协议、域名、端口，不带路径），例如本地 `http://localhost:3000`；正式环境填写实际HTTPS origin。
+- 配置必须持久化到宿主机挂载文件或部署配置中，避免只修改容器内部、重建后丢失。更新时保留发票数据库表和附件卷。
+
+保存后，在Nginx所在环境检查并重载；当前本地容器命令为：
+
+```sh
+docker exec new-api-main-local-browser nginx -t
+# 仅在检查成功后执行
+docker exec new-api-main-local-browser nginx -s reload
+```
+
+其他环境替换实际Nginx容器名，或在宿主机执行 `nginx -t`、`nginx -s reload`。升级后访问 `/invoice/admin/users`，确认页面、原站登录返回、发票接口及文件下载正常。可复制的独立片段见 [reverse-proxy.example.conf](docs/reverse-proxy.example.conf)。
+
 ## 附件与回退
 
 单文件 PDF/JPG/JPEG/PNG <=10MiB，总请求 <=11MiB；校验扩展/MIME/签名及图片解码/像素。私有目录不暴露静态 URL，下载必须 Bearer。文件先落盘再提交；提交结果未知保留文件并按原请求键恢复，不能自动换键。
