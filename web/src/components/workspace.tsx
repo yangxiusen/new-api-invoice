@@ -48,9 +48,9 @@ function LoginPage({ unavailable = false }: { unavailable?: boolean }) {
         <div className="brand-mark">
           <ReceiptText size={28} />
         </div>
-        <span className="eyebrow">NEW API · INVOICE</span>
+        <span className="eyebrow">INVOICE</span>
         <h1>{unavailable ? "连接暂不可用" : "进入发票工作台"}</h1>
-        <p>使用 New API 账号登录，管理企业抬头、开票申请和发票文件。</p>
+        <p>使用原站账号登录，管理企业抬头、开票申请和发票文件。</p>
         {(unavailable || error) && (
           <Notice error>{error || session.error || "发票或原站服务暂不可用，请稍后重试。"}</Notice>
         )}
@@ -175,7 +175,7 @@ export function Workspace() {
             <ReceiptText size={23} />
           </span>
           <span>
-            Invoice<small>New API 发票工作台</small>
+            Invoice<small>发票工作台</small>
           </span>
         </Link>
         <nav aria-label="工作区导航">
